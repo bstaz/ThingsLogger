@@ -5,7 +5,7 @@ from time import sleep
 
 import things
 from rich import print
-from pydantic import BaseModel, ValidationError, PostgresDsn
+from pydantic import PostgresDsn
 from pydantic_settings import BaseSettings
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 from jinja2 import Environment
