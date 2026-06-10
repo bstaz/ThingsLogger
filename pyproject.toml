@@ -1,0 +1,15 @@
+[project]
+name = "things-logger"
+version = "0.1.0"
+description = "Log completed Things 3 tasks to Obsidian markdown files"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "jinja2>=3.1.6",
+    "psycopg2-binary>=2.9.11",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.13.1",
+    "rich>=14.3.3",
+    "sqlmodel>=0.0.37",
+    "things-py>=1.0.0",
+]

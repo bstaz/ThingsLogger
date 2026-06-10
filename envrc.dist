@@ -1,0 +1,8 @@
+export dbhost=localhost
+export dbname=thingslogger
+export dbuser=thingslogger
+export dbpass=thingslogger
+export dbport=5432
+export log_output=/path/to/out/dir
+export template_path=/path/to/jinja/template
+
