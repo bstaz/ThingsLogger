@@ -150,3 +150,4 @@ if __name__ == "__main__":
             sleep(60)
         except KeyboardInterrupt:
             print("Exiting...")
+            exit(0)
