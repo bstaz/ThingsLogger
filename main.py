@@ -140,6 +140,7 @@ def main():
             )
             session.add(db_task)
     session.commit()
+    session.close()
 
 
 if __name__ == "__main__":
