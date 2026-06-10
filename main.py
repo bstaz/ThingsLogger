@@ -76,7 +76,7 @@ def log_task(task, project=None, checklist_items=None):
         ),
         "notes": task["notes"],
         "thingslink": f"things:///show?id={task['uuid']}",
-        "tags": task["tags"],
+        "tags": task["tags"] if "tags" in task else None,
         "project": project,
         "checklist_items": checklist_items,
     }
@@ -130,10 +130,9 @@ def main():
                             )
                         else:
                             log_task(task, checklist_items=checklist_items)
-            except TypeError:
+            except TypeError as e:
+                print(e)
                 print(task)
-                print(task_modified)
-                exit(1)
         else:
             print(f"New task {task['title']} added")
             db_task = Task(
