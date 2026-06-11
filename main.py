@@ -25,16 +25,10 @@ class Settings(BaseSettings, case_sensitive=True):
         return f"postgresql://{self.dbuser}:{self.dbpass}@{self.dbhost}:{self.dbport}/{self.dbname}"
 
 
-def connect(settings: Settings) -> Session:
-    engine = None
-    if settings.debug:
-        engine = create_engine(str(settings.dsn()), echo=True)
-    else:
-        engine = create_engine(str(settings.dsn()))
-
+def make_engine(settings: Settings):
+    engine = create_engine(str(settings.dsn()), echo=settings.debug)
     SQLModel.metadata.create_all(engine)
-
-    return Session(engine)
+    return engine
 
 
 class Task(SQLModel, table=True):
@@ -87,10 +81,7 @@ def log_task(task, project=None, checklist_items=None):
         print(f'Logged task "{task["title"]}" to {filename}')
 
 
-def main():
-    settings = Settings()
-
-    session: Session = connect(settings)
+def main(engine):
     all_tasks = things.tasks(status=None, type="to-do")
 
     # Enumerate projects and areas, first
@@ -104,50 +95,57 @@ def main():
         else:
             projects_list[project["uuid"]] = project["title"]
 
-    for task in all_tasks:
-        # print(task)
-        db_task = session.exec(select(Task).where(Task.uuid == task["uuid"])).first()
-        date_to_use = task["modified"] if task["modified"] else task["created"]
-        task_modified: datetime = datetime.strptime(date_to_use, "%Y-%m-%d %H:%M:%S")
-        if db_task:
-            try:
-                if db_task.modified < task_modified:
-                    db_task.title = task["title"]
-                    db_task.modified = task_modified
-                    session.add(db_task)
-                    print(f'Updated task "{db_task.title}"')
-                    if task["stop_date"]:
-                        print(f'Task "{db_task.title}" has been completed')
-                        if "checklist" in task:
-                            checklist_items = things.checklist_items(task["uuid"])
-                        else:
-                            checklist_items = None
-                        if "project" in task:
-                            log_task(
-                                task,
-                                project=projects_list[task["project"]],
-                                checklist_items=checklist_items,
-                            )
-                        else:
-                            log_task(task, checklist_items=checklist_items)
-            except TypeError as e:
-                print(e)
-                print(task)
-        else:
-            print(f"New task {task['title']} added")
-            db_task = Task(
-                uuid=task["uuid"], title=task["title"], modified=task_modified
+    with Session(engine) as session:
+        for task in all_tasks:
+            # print(task)
+            db_task = session.exec(
+                select(Task).where(Task.uuid == task["uuid"])
+            ).first()
+            date_to_use = task["modified"] if task["modified"] else task["created"]
+            task_modified: datetime = datetime.strptime(
+                date_to_use, "%Y-%m-%d %H:%M:%S"
             )
-            session.add(db_task)
-    session.commit()
-    session.close()
+            if db_task:
+                try:
+                    if db_task.modified < task_modified:
+                        db_task.title = task["title"]
+                        db_task.modified = task_modified
+                        session.add(db_task)
+                        print(f'Updated task "{db_task.title}"')
+                        if task["stop_date"]:
+                            print(f'Task "{db_task.title}" has been completed')
+                            if "checklist" in task:
+                                checklist_items = things.checklist_items(task["uuid"])
+                            else:
+                                checklist_items = None
+                            if "project" in task:
+                                log_task(
+                                    task,
+                                    project=projects_list[task["project"]],
+                                    checklist_items=checklist_items,
+                                )
+                            else:
+                                log_task(task, checklist_items=checklist_items)
+                except TypeError as e:
+                    print(e)
+                    print(task)
+            else:
+                print(f"New task {task['title']} added")
+                db_task = Task(
+                    uuid=task["uuid"], title=task["title"], modified=task_modified
+                )
+                session.add(db_task)
+        session.commit()
 
 
 if __name__ == "__main__":
+    settings = Settings()
+    engine = make_engine(settings)
     while True:
         try:
-            main()
+            main(engine)
             sleep(60)
         except KeyboardInterrupt:
             print("Exiting...")
+            engine.dispose()
             exit(0)
